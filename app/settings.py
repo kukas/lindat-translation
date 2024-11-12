@@ -30,6 +30,6 @@ DOCLVL_LOAD_BALANCED = '10.10.51.76:9000'
 UPLOAD_FOLDER = '/tmp/translator_uploads'
 
 # These should match with the appropriate constants in the frontend
-ALLOWED_EXTENSIONS = {'txt', 'xml', 'html', 'htm', 'docx', 'odt', 'pptx', 'odp', 'xlsx', 'ods', 'pdf', 'srt', 'md', 'xlf', 'json', 'yaml'}
+ALLOWED_EXTENSIONS = {'txt', 'xml', 'html', 'htm', 'docx', 'odt', 'pptx', 'odp', 'xlsx', 'ods', 'pdf', 'srt', 'md', 'xlf', 'xliff', 'json', 'yaml'}
 
 TIKAL_PATH = "/home/balhar/okapi/"
