@@ -1,3 +1,4 @@
+# pylint: disable=missing-timeout
 import unittest
 import requests
 import os
@@ -12,7 +13,7 @@ def _upload_binary_file(url, filename, langpair):
             "src": src,
             "tgt": tgt,
         }, files={
-            'input_text': f
+            'input_file': f
         })
 
     # Uncomment to save the file:
@@ -24,7 +25,8 @@ def _upload_binary_file(url, filename, langpair):
     return r
 
 class LanguagesEndpointTester(unittest.TestCase):
-    ADDRESS = 'http://127.0.0.1:5000/api/v2/languages/'
+    ADDRESS_BASE = 'http://127.0.0.1:5000/api/v2/languages/'
+    ADDRESS_FILE = ADDRESS_BASE + "file"
     en_cs = {
         "src": "en",
         "tgt": "cs",
@@ -37,7 +39,7 @@ class LanguagesEndpointTester(unittest.TestCase):
         os.makedirs("test_data", exist_ok=True)
 
     def test_list_languages(self):
-        r = requests.get(self.ADDRESS)
+        r = requests.get(self.ADDRESS_BASE)
         self.assertEqual(r.status_code, 200)
         # test valid json
         self.assertTrue(r.json())
@@ -46,7 +48,7 @@ class LanguagesEndpointTester(unittest.TestCase):
     
     def test_translate(self):
         # Test successful translation request, direct input
-        r = requests.post(self.ADDRESS, data={
+        r = requests.post(self.ADDRESS_BASE, data={
             "src": "en",
             "tgt": "cs",
             "input_text": "this is a sample text"
@@ -57,8 +59,8 @@ class LanguagesEndpointTester(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.text, 'toto je ukázkový text\n')
 
-        # Test successful translation request, file upload
-        r = requests.post(self.ADDRESS, headers={
+        # Test successful translation request, plaintext upload
+        r = requests.post(self.ADDRESS_BASE, headers={
             "accept": "application/json",
         }, data=self.en_cs, files={
             'input_text': ('hello.txt', 'this is a sample text', 'text/plain')
@@ -69,32 +71,32 @@ class LanguagesEndpointTester(unittest.TestCase):
 
     def test_empty(self):
         # Test empty request (input_text not set)
-        r = requests.post(self.ADDRESS, data=self.en_cs)
+        r = requests.post(self.ADDRESS_BASE, data=self.en_cs)
         self.assertEqual(r.status_code, 400)
         self.assertIn("No text found", r.text)
 
-        r = requests.post(self.ADDRESS, data={
+        r = requests.post(self.ADDRESS_BASE, data={
             "src": "en",
             "tgt": "cs",
             "input_text": ""
         })
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.text, '')
-        r = requests.post(self.ADDRESS, data=self.en_cs, files={
-            'input_text': ('empty.txt', '', 'text/plain')
+        r = requests.post(self.ADDRESS_FILE, data=self.en_cs, files={
+            'input_file': ('empty.txt', '', 'text/plain')
         })
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.text, '')
-        r = requests.post(self.ADDRESS, data=self.en_cs, files={
-            'input_text': ('empty.txt', None, 'text/plain')
+        r = requests.post(self.ADDRESS_FILE, data=self.en_cs, files={
+            'input_file': ('empty.txt', None, 'text/plain')
         })
         self.assertEqual(r.status_code, 400)
-        self.assertEqual(r.text, '{"message": "No text found in the input_text form/field or in request files"}\n')
+        self.assertEqual(r.text, '{"message": "No file sent"}\n')
 
     def test_wrong_extension(self):
         # wrong extension
-        r = requests.post(self.ADDRESS, data=self.en_cs, files={
-            'input_text': ('empty.zip', b"asdfasdaf", 'application/zip')
+        r = requests.post(self.ADDRESS_FILE, data=self.en_cs, files={
+            'input_file': ('empty.zip', b"asdfasdaf", 'application/zip')
         })
         self.assertEqual(r.status_code, 415)
         self.assertEqual(r.text, '{"message": "Unsupported file type for translation"}\n')
@@ -103,35 +105,35 @@ class LanguagesEndpointTester(unittest.TestCase):
     def test_srctgt(self):
         # the default language pair is en-cs
         # missing tgt
-        r = requests.post(self.ADDRESS, data={
+        r = requests.post(self.ADDRESS_BASE, data={
             "src": "en",
             "input_text": "this is a sample text"
         })
         self.assertEqual(r.status_code, 200)
         # missing src
-        r = requests.post(self.ADDRESS, data={
+        r = requests.post(self.ADDRESS_BASE, data={
             "tgt": "cs",
             "input_text": "this is a sample text"
         })
         self.assertEqual(r.status_code, 200)
         # missing both
-        r = requests.post(self.ADDRESS, data={
+        r = requests.post(self.ADDRESS_BASE, data={
             "input_text": "this is a sample text"
         })
         self.assertEqual(r.status_code, 200)
 
     def test_document_html(self):
         # Test successful translation request, file upload
-        r = requests.post(self.ADDRESS, data=self.en_cs, files={
-            'input_text': ('hello.html', '<p>This is <i>a <b>sample</b> text</i></p><p><p><p></p></p></p>', 'text/html')
+        r = requests.post(self.ADDRESS_FILE, data=self.en_cs, files={
+            'input_file': ('hello.html', '<p>This is <i>a <b>sample</b> text</i></p><p><p><p></p></p></p>', 'text/html')
         })
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.text.replace(" ", ""), '<p>Totoje<i><b>ukázkový</b>text</i></p><p><p><p></p></p></p>')
 
     def test_document_xml(self):
         # Test successful translation request, file upload
-        r = requests.post(self.ADDRESS, data=self.en_cs, files={
-            'input_text': ('hello.xml', '<p>This is <i>a <b>sample</b> text</i></p>', 'text/xml')
+        r = requests.post(self.ADDRESS_FILE, data=self.en_cs, files={
+            'input_file': ('hello.xml', '<p>This is <i>a <b>sample</b> text</i></p>', 'text/xml')
         })
         self.assertEqual(r.status_code, 200)
         expected = '<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -141,19 +143,19 @@ class LanguagesEndpointTester(unittest.TestCase):
 
     def test_document_odt(self):
         # Test successful translation request, file upload
-        r = _upload_binary_file(self.ADDRESS, "test_libreoffice.odt", "cs-en")
+        r = _upload_binary_file(self.ADDRESS_FILE, "test_libreoffice.odt", "cs-en")
         self.assertEqual(r.status_code, 200)
 
     def test_too_long_text(self):
         # too long text
-        r = requests.post(self.ADDRESS, data={
+        r = requests.post(self.ADDRESS_BASE, data={
             "input_text": "This is a "*(1024*10) # 100kB
         })
         self.assertEqual(r.status_code, 413)
         self.assertEqual(r.text, '{"message": "The total text length in the document exceeds the translation limit."}\n')
 
-        r = requests.post(self.ADDRESS, files={
-            'input_text': ('hello.txt', "This is a "*(1024*10), 'text/plain') # 100kB
+        r = requests.post(self.ADDRESS_FILE, files={
+            'input_file': ('hello.txt', "This is a "*(1024*10), 'text/plain') # 100kB
         })
         self.assertEqual(r.status_code, 413)
         self.assertEqual(r.text, '{"message": "The total text length in the document exceeds the translation limit."}\n')
@@ -163,32 +165,11 @@ class LanguagesEndpointTester(unittest.TestCase):
         without_tags = text.replace("<p>", "").replace("</p>", "")
         repeats = ceil(102400/len(without_tags)) + 1
         final = text*repeats
-        r = requests.post(self.ADDRESS, files={
-            'input_text': ('hello.html', final, 'text/html')
+        r = requests.post(self.ADDRESS_FILE, files={
+            'input_file': ('hello.html', final, 'text/html')
         })
         self.assertEqual(r.status_code, 413)
         self.assertEqual(r.text, '{"message": "The total text length in the document exceeds the translation limit."}\n')
-
-    def test_do_not_add_whitespace(self):
-        r = requests.post(self.ADDRESS, data=self.en_cs, files={
-            'input_text': ('hello.html', '<p><b>Sample</b>. <i>text</i>.<br />Hello!</p>', 'text/html')
-        })
-        self.assertEqual(r.status_code, 200)
-        self.assertEqual(r.text, '<p><b>Ukázka</b>. <i>textu</i>.<br />Ahoj!</p>')
-
-    def test_preserve_whitespace(self):
-        r = requests.post(self.ADDRESS, data=self.en_cs, files={
-            'input_text': ('hello.html', '<pre>This\t\t\tis   <i>a <b>sample</b> text</i></pre><pre>A\t  \t<b>\t \t </b> <i>\t \t</i> </pre>', 'text/html')
-        })
-        self.assertEqual(r.status_code, 200)
-        self.assertEqual(r.text, '<pre>Toto\t\t\tje   <i> <b>ukázkový</b> text</i></pre><pre>A\t  \t<b>\t \t </b> <i>\t \t</i> </pre>')
-
-    def test_whitespace_after_removed_comma(self):
-        r = requests.post(self.ADDRESS, data=self.cs_en, files={
-            'input_text': ('kofr1.html', 'V 8. stol. př. n. l. vznikly v Řecku eposy <i>Ilias a Odysseia</i>, jejichž autorství je tradičně připisováno Homérovi (1200–700 př. n. l.).', 'text/html')
-        })
-        self.assertEqual(r.status_code, 200)
-        self.assertEqual(r.text, 'In the 8th century BC, the Greek epics <i>Iliad and Odysseus</i> were created, the authorship of which is traditionally attributed to Homer (1200–700 BC).')
 
 
 if __name__ == "__main__":

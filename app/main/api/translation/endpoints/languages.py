@@ -3,8 +3,9 @@ from flask import request, url_for
 from flask_restx import Namespace, Resource, fields
 
 from app.main.api.translation.endpoints.MyAbstractResource import MyAbstractResource
-from app.main.api.translation.parsers import text_input_with_src_tgt  # , file_input
+from app.main.api.translation.parsers import upload_parser
 from app.model_settings import languages
+from app.settings import FILE_TRANSLATE_MIMETYPES
 
 from app.main.api_examples.language_resource_example import *
 from app.main.api_examples.languages_resource_example import *
@@ -120,34 +121,36 @@ class LanguageCollection(Resource):
 class LanguageTranslate(MyAbstractResource):
     @ns.produces(['application/json', 'text/plain'])
     @ns.response(code=200, description="Success", model=str)
-    @ns.response(code=415, description="Unsupported file type for translation")
-    @ns.param(**{'name': 'tgt', 'description': 'tgt query param description', 'x-example': 'cs'})
-    @ns.param(**{'name': 'src', 'description': 'src query param description', 'x-example': 'en'})
-    @ns.param(**{'name': 'input_text', 'description': 'text to translate',
+    @ns.response(code=415, description="You sent a file but it was not text/plain")
+    @ns.param(**{'name': 'tgt', 'description': 'Target language (e.g., `cs` for Czech)', 'x-example': 'cs'})
+    @ns.param(**{'name': 'src', 'description': 'Source language (e.g., `en` for English)', 'x-example': 'en'})
+    @ns.param(**{'name': 'input_text', 'description': 'Text to translate',
                  'x-example': 'this is a sample text', '_in': 'formData'})
     def post(self):
         """
-        Translate input from scr lang to tgt lang.
-        It expects the text in variable called `input_text` and handles both "application/x-www-form-urlencoded" and "multipart/form-data" (for uploading files)
+        Translate input from src lang to tgt lang.
+        It expects the text in variable called `input_text` and handles both "application/x-www-form-urlencoded" and "multipart/form-data" (for uploading text/plain files)
         """
         self.start_time_request()
-        translatable = self.get_translatable_from_request()
-        args = text_input_with_src_tgt.parse_args(request)
-        src = args.get('src') or 'en'
-        tgt = args.get('tgt') or 'cs'
-        self.set_media_type_representations()
-        try:
-            translatable.translate_from_to(src, tgt)
-            extra_msg = 'src={};tgt={}'.format(src, tgt)
-            return translatable.create_response(self.extra_headers(extra_msg))
-        except ValueError as e:
-            log.exception(e)
-            ns.abort(code=404, message='Can\'t translate from {} to {}'.format(src, tgt))
-        finally:
-            try:
-                self.log_request(src, tgt, translatable)
-            except Exception as ex:
-                log.exception(ex)
+        translatable = self.get_text_from_request()
+        return self.process_translatable_languages_endpoint(translatable, ns, log)
+
+@ns.route('/file/')
+class LanguageTranslateFile(MyAbstractResource):
+    @ns.produces(FILE_TRANSLATE_MIMETYPES)
+    @ns.response(code=200, description="Success")
+    @ns.response(code=415, description="Unsupported file type for translation")
+    @ns.param(**{'name': 'tgt', 'description': 'Target language (e.g., `cs` for Czech)', 'x-example': 'cs'})
+    @ns.param(**{'name': 'src', 'description': 'Source language (e.g., `en` for English)', 'x-example': 'en'})
+    @ns.expect(upload_parser)
+    def post(self):
+        """
+        Translate a file from src lang to tgt lang.
+        It expects the file in a variable called `input_file` sent using "multipart/form-data"
+        """
+        self.start_time_request()
+        translatable = self.get_file_from_request()
+        return self.process_translatable_languages_endpoint(translatable, ns, log)
 
 
 @ns.route('/<string(length=2):language>')

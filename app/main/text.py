@@ -17,6 +17,9 @@ class Text(Translatable):
         self._input_word_count = count_words(text)
         text = normalize('NFC', text)
         self._input_nfc_len = len(text)
+        self.check_text_length()
+    
+    def check_text_length(self):
         if self._input_nfc_len >= MAX_TEXT_LENGTH:
             api.abort(code=413, message='The total text length in the document exceeds the translation limit.')
     
@@ -30,11 +33,9 @@ class Text(Translatable):
 
     def translate_from_to(self, src, tgt):
         self.translation = translate_from_to(src, tgt, self.text)
-        self._output_word_count = count_words(self.translation)
     
     def translate_with_model(self, model, src, tgt):
         self.translation = translate_with_model(model, self.text, src, tgt)
-        self._output_word_count = count_words(self.translation)
 
     def get_text(self):
         return self.text
@@ -43,6 +44,7 @@ class Text(Translatable):
         return extract_text(self.translation)
     
     def create_response(self, extra_headers):
+        self._output_word_count = count_words(self.translation)
         headers = {
             **self.prep_billing_headers(),
             **extra_headers
