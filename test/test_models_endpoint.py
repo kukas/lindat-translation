@@ -7,7 +7,6 @@ from test_languages_endpoint import _upload_binary_file
 
 class ModelsEndpointTester(unittest.TestCase):
     ADDRESS_BASE = 'http://127.0.0.1:5000/api/v2/models'
-    ADDRESS_FILE = ADDRESS_BASE + "/file"
 
     def setUp(self):
         os.makedirs("test_data", exist_ok=True)
@@ -91,7 +90,7 @@ class ModelsEndpointTester(unittest.TestCase):
 
     def test_document_html(self):
         # Test successful translation request, file upload
-        r = requests.post(self.ADDRESS_FILE+"/en-cs", files={
+        r = requests.post(self.ADDRESS_BASE+"/en-cs/file", files={
             'input_file': ('hello.html', '<p>This is <i>a <b>sample</b> text</i></p>', 'text/html')
         })
         self.assertEqual(r.status_code, 200)
@@ -99,7 +98,7 @@ class ModelsEndpointTester(unittest.TestCase):
 
     def test_document_xml(self):
         # Test successful translation request, file upload
-        r = requests.post(self.ADDRESS_FILE+"/en-cs", files={
+        r = requests.post(self.ADDRESS_BASE+"/en-cs/file", files={
             'input_file': ('hello.xml', '<p>This is <i>a <b>sample</b> text</i></p>', 'text/xml')
         })
         self.assertEqual(r.status_code, 200)
@@ -108,7 +107,7 @@ class ModelsEndpointTester(unittest.TestCase):
         self.assertEqual(r.text, expected)
 
     def test_document_odt(self):
-        r = _upload_binary_file(self.ADDRESS_FILE+"/cs-en", "test_libreoffice.odt", "cs-en")
+        r = _upload_binary_file(self.ADDRESS_BASE+"/cs-en/file", "test_libreoffice.odt", "cs-en")
         self.assertEqual(r.status_code, 200)
 
     def test_translate_list(self):

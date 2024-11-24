@@ -165,6 +165,7 @@ class BatchTranslation(MyAbstractResource):
         translatable = TextBatch(texts)
         return self.process_translatable_models_endpoint(model, translatable, ns, log, src, tgt)
 
+@ns.route(f'/<any{model_names}:model>/file')
 @ns.param(**{'name': 'model', 'description': 'model name', 'x-example': 'en-cs', '_in': 'path'})
 class ModelTranslateFile(MyAbstractResource):
     @ns.produces(FILE_TRANSLATE_MIMETYPES)
