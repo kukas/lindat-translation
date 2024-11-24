@@ -123,10 +123,11 @@ class MyAbstractResource(Resource):
             'input_type': args.get('inputType') or 'keyboard',
             'log_input': args.get('logInput', False),
             'ip_address': request.headers.get('X-Real-IP', 'unknown')
-             }
+        }
 
     def extra_headers(self, extra_msg):
         end = datetime.datetime.now()
+        assert self._start_time, "You did not run start_time_request()"
         return {
             'X-Billing-Start-Time': self._start_time,
             'X-Billing-End-Time': end,
