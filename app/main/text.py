@@ -21,7 +21,7 @@ class Text(Translatable):
     
     def check_text_length(self):
         if self._input_nfc_len >= MAX_TEXT_LENGTH:
-            api.abort(code=413, message='The total text length in the document exceeds the translation limit.')
+            api.abort(code=413, message='The total text length in the request exceeds the translation limit.')
     
     @classmethod
     def from_file(cls, request_file):

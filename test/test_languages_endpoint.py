@@ -152,7 +152,7 @@ class LanguagesEndpointTester(unittest.TestCase):
             "input_text": "This is a "*(1024*10) # 100kB
         })
         self.assertEqual(r.status_code, 413)
-        self.assertEqual(r.text, '{"message": "The total text length in the document exceeds the translation limit."}\n')
+        self.assertEqual(r.text, '{"message": "The total text length in the request exceeds the translation limit."}\n')
 
         r = requests.post(self.ADDRESS_FILE, files={
             'input_file': ('hello.txt', "This is a "*(1024*10), 'text/plain') # 100kB
