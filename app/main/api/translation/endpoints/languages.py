@@ -131,11 +131,12 @@ class LanguageTranslate(MyAbstractResource):
         Translate input from src lang to tgt lang.
         It expects the text in variable called `input_text` and handles both "application/x-www-form-urlencoded" and "multipart/form-data" (for uploading text/plain files)
         """
+        self.set_media_type_representations() # ensures correct output Content-Type according to the requests Accept header
         self.start_time_request()
         translatable = self.get_text_from_request()
         return self.process_translatable_languages_endpoint(translatable, ns, log)
 
-@ns.route('/file/')
+@ns.route('/file')
 class LanguageTranslateFile(MyAbstractResource):
     @ns.produces(FILE_TRANSLATE_MIMETYPES)
     @ns.response(code=200, description="Success")

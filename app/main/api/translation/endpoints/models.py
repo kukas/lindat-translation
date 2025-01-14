@@ -114,6 +114,7 @@ class ModelItem(MyAbstractResource):
         It expects the text in variable called `input_text` and handles both "application/x-www-form-urlencoded" and "multipart/form-data" (for uploading files)
         If you don't provide src or tgt some will be chosen for you!
         """
+        self.set_media_type_representations() # ensures correct output Content-Type according to the requests Accept header
         self.start_time_request()
         translatable = self.get_text_from_request()
 
@@ -132,7 +133,7 @@ class ModelItem(MyAbstractResource):
 @ns.route(f'/<any{model_names}:model>/batch')
 class BatchTranslation(MyAbstractResource):
     @ns.expect(ns.model('BatchTranslationRequest', {
-        'input_text': fields.List(fields.String, required=True, description='List of sentences to translate'),
+        'input_texts': fields.List(fields.String, required=True, description='List of sentences to translate'),
         'src': fields.String(description='Source language code'),
         'tgt': fields.String(description='Target language code'),
     }))

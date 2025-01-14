@@ -73,7 +73,6 @@ class MyAbstractResource(Resource):
         args = text_input_with_src_tgt.parse_args(request)
         src = args.get('src') or 'en'
         tgt = args.get('tgt') or 'cs'
-        self.set_media_type_representations()
         try:
             translatable.translate_from_to(src, tgt)
             extra_msg = 'src={};tgt={}'.format(src, tgt)
@@ -102,7 +101,6 @@ class MyAbstractResource(Resource):
             ns.abort(code=404,
                       message='This model does not support translation from {} to {}'
                       .format(src, tgt))
-        self.set_media_type_representations()
         try:
             translatable.translate_with_model(model, src, tgt)
             extra_msg = 'src={};tgt={};model={}'.format(src, tgt, model.name)
