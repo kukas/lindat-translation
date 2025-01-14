@@ -27,6 +27,7 @@ def _upload_binary_file(url, filename, langpair):
 class LanguagesEndpointTester(unittest.TestCase):
     ADDRESS_BASE = 'http://127.0.0.1:5000/api/v2/languages/'
     ADDRESS_FILE = ADDRESS_BASE + "file"
+    ADDRESS_BATCH = ADDRESS_BASE + "batch"
     en_cs = {
         "src": "en",
         "tgt": "cs",
@@ -47,7 +48,7 @@ class LanguagesEndpointTester(unittest.TestCase):
         self.assertTrue("_links" in r.json())
     
     def test_translate(self):
-        # Test successful translation request, direct input
+        # Test successful translation request, direct formdata input
         r = requests.post(self.ADDRESS_BASE, data={
             "src": "en",
             "tgt": "cs",
@@ -55,6 +56,14 @@ class LanguagesEndpointTester(unittest.TestCase):
         })
         # we need to set the encoding, 
         # the server does not define charset and it defaults to ISO-8859-1 for text/plain
+        r.encoding = 'utf-8'
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.text, 'toto je ukázkový text\n')
+
+        # Test successful translation request, query parameters
+        r = requests.post(self.ADDRESS_BASE+"?src=en&tgt=cs", data={
+            "input_text": "this is a sample text"
+        })
         r.encoding = 'utf-8'
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.text, 'toto je ukázkový text\n')
@@ -68,6 +77,24 @@ class LanguagesEndpointTester(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json()[0], 'toto je ukázkový text\n')
 
+    def test_wrong_accept(self):
+        r = requests.post(self.ADDRESS_BASE+"?src=en&tgt=cs", headers={
+            "accept": "text/xml",
+        }, data={
+            "input_text": "this is a sample text"
+        })
+        self.assertEqual(r.status_code, 406)
+        self.assertIn("not acceptable", r.text)
+
+    def test_wrong_contenttype(self):
+        r = requests.post(self.ADDRESS_BASE+"?src=en&tgt=cs", headers={
+            "Content-Type": "text/xml",
+        }, data={
+            "input_text": "this is a sample text"
+        })
+        pp(r.text)
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("No text found in the input_text", r.text)
 
     def test_empty(self):
         # Test empty request (input_text not set)
@@ -122,6 +149,25 @@ class LanguagesEndpointTester(unittest.TestCase):
         })
         self.assertEqual(r.status_code, 200)
 
+    def test_nonexistent_srctgt(self):
+        # src+tgt in formdata
+        r = requests.post(self.ADDRESS_BASE, data={
+            "src": "NONEXISTENT_LANG",
+            "tgt": "NONEXISTENT_LANG",
+            "input_text": "this is a sample text"
+        })
+        self.assertEqual(r.status_code, 404)
+        self.assertIn("message", r.json())
+        self.assertIn("Can\'t translate from NONEXISTENT_LANG to NONEXISTENT_LANG", r.json()["message"])
+        # src+tgt in query
+        r = requests.post(self.ADDRESS_BASE+"?src=NONEXISTENT_LANG&tgt=NONEXISTENT_LANG", data={
+            "input_text": "this is a sample text"
+        })
+        self.assertEqual(r.status_code, 404)
+        self.assertIn("message", r.json())
+        self.assertIn("Can\'t translate from NONEXISTENT_LANG to NONEXISTENT_LANG", r.json()["message"])
+
+
     def test_document_html(self):
         # Test successful translation request, file upload
         r = requests.post(self.ADDRESS_FILE, data=self.en_cs, files={
@@ -170,6 +216,34 @@ class LanguagesEndpointTester(unittest.TestCase):
         })
         self.assertEqual(r.status_code, 413)
         self.assertEqual(r.text, '{"message": "The total text length in the document exceeds the translation limit."}\n')
+
+    def test_translate_batch(self):
+        r = requests.post(self.ADDRESS_BATCH, headers={
+            "Content-Type": "application/json",
+            "accept": "application/json",
+        }, json={
+            "input_texts": ["Apple", "Banana", "Pineapple"],
+            "src": "en",
+            "tgt": "cs"
+        })
+        r.encoding = 'utf-8'
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json(),  {"translations": ["Jablko\n", "Banán\n", "Ananas\n"]})
+
+        r = requests.post(self.ADDRESS_BATCH, headers={
+            "accept": "application/json",
+        }, json={
+            "input_texts": [
+                "Text about beautiful river banks, where one can swim in or chill out.",
+                "I repeat, this text is about these banks."
+            ]
+        })
+        r.encoding = 'utf-8'
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json(),  {"translations": [
+            "Text o krásných březích řek, kde si člověk může zaplavat nebo se odreagovat.\n", 
+            "Opakuji, tento text je o těchto bankách.\n"
+        ]})
 
 
 if __name__ == "__main__":

@@ -66,7 +66,25 @@ class ModelsEndpointTester(unittest.TestCase):
         self.assertEqual(r.text, '')
 
 
-    def test_srctgt(self):
+    def test_srctgt_query(self):
+        # correct usage of src/tgt on /model endpoint
+        r = requests.post(self.ADDRESS_BASE+"/en-cs?src=en&tgt=cs", data={
+            "input_text": "this is a sample text"
+        })
+        r.encoding = 'utf-8'
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.text, 'toto je ukázkový text\n')
+
+        # incorrect usages
+        for src, tgt in [("en", "uk"), ("uk", "cs"), ("cs", "en"), ("", 123)]:
+            r = requests.post(self.ADDRESS_BASE+f"/en-cs?src={src}&tgt={tgt}", data={
+                "input_text": "this is a sample text"
+            })
+            r.encoding = 'utf-8'
+            self.assertEqual(r.status_code, 404)
+            self.assertIn('This model does not support ', r.text)
+
+    def test_srctgt_formdata(self):
         # correct usage of src/tgt on /model endpoint
         r = requests.post(self.ADDRESS_BASE+"/en-cs", data={
             "src": "en",
@@ -110,7 +128,20 @@ class ModelsEndpointTester(unittest.TestCase):
         r = _upload_binary_file(self.ADDRESS_BASE+"/cs-en/file", "test_libreoffice.odt", "cs-en")
         self.assertEqual(r.status_code, 200)
 
-    def test_translate_list(self):
+    def test_translate_batch_wrong_contenttype(self):
+        r = requests.post(self.ADDRESS_BASE+"/en-cs/batch", headers={
+            "Content-Type": "text/plain",
+            "accept": "application/json",
+        }, json={
+            "input_texts": ["Apple", "Banana", "Pineapple"]
+        })
+        r.encoding = 'utf-8'
+        self.assertEqual(r.status_code, 415)
+        self.assertEqual(r.json(),  {'message': 'Did not attempt to load JSON data because the request Content-Type was not \'application/json\'.'})
+
+
+
+    def test_translate_batch(self):
         r = requests.post(self.ADDRESS_BASE+"/en-cs/batch", headers={
             "Content-Type": "application/json",
             "accept": "application/json",
@@ -118,17 +149,17 @@ class ModelsEndpointTester(unittest.TestCase):
             "input_texts": ["Apple", "Banana", "Pineapple"]
         })
         r.encoding = 'utf-8'
+        # pp(r.json())
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json(),  {"translations": ["Jablko\n", "Banán\n", "Ananas\n"]})
 
-        r = requests.post(self.ADDRESS_BASE+"/doc-en-cs/batch", headers={
-            "accept": "application/json",
-        }, json={
+        r = requests.post(self.ADDRESS_BASE+"/doc-en-cs/batch", json={
             "input_texts": [
                 "Text about beautiful river banks, where one can swim in or chill out.",
                 "I repeat, this text is about these banks."
             ]
         })
+        # pp(r.json())
         r.encoding = 'utf-8'
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json(),  {"translations": [
