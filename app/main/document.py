@@ -79,6 +79,7 @@ class Document(Translatable):
         self._input_word_count = 0
         self._output_word_count = 0
         self._input_nfc_len = 0
+        self.text = "<Document lines not extracted yet>"
     
     @classmethod
     def from_file(cls, request_file):
