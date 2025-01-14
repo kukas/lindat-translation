@@ -35,5 +35,4 @@ class TextBatch(Text):
             **self.prep_billing_headers(),
             **extra_headers
         }
-        print(self.translation)
         return {"translations": self.translation}, HTTPStatus.OK, headers
