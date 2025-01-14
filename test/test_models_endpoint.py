@@ -124,6 +124,13 @@ class ModelsEndpointTester(unittest.TestCase):
         expected += '<p>Tohle je <i>a <b>vzorek</b> text</i></p>'
         self.assertEqual(r.text, expected)
 
+    def test_document_wrong_srctgt(self):
+        r = requests.post(self.ADDRESS_BASE+"/en-cs/file?src=en&tgt=ru", files={
+            'input_file': ('hello.xml', '<p>This is <i>a <b>sample</b> text</i></p>', 'text/xml')
+        })
+        self.assertEqual(r.status_code, 404)
+        self.assertEqual(r.text, '{"message": "This model does not support translation from en to ru"}\n')
+
     def test_document_odt(self):
         r = _upload_binary_file(self.ADDRESS_BASE+"/cs-en/file", "test_libreoffice.odt", "cs-en")
         self.assertEqual(r.status_code, 200)
@@ -139,10 +146,18 @@ class ModelsEndpointTester(unittest.TestCase):
         self.assertEqual(r.status_code, 415)
         self.assertEqual(r.json(),  {'message': 'Did not attempt to load JSON data because the request Content-Type was not \'application/json\'.'})
 
-
+    def test_translate_batch_wrong_srctgt(self):
+        r = requests.post(self.ADDRESS_BASE+"/en-cs/batch?src=en&tgt=uk", headers={
+            "accept": "application/json",
+        }, json={
+            "input_texts": ["Apple", "Banana", "Pineapple"]
+        })
+        r.encoding = 'utf-8'
+        self.assertEqual(r.status_code, 404)
+        self.assertEqual(r.json(),  {'message': 'This model does not support translation from en to uk'})
 
     def test_translate_batch(self):
-        r = requests.post(self.ADDRESS_BASE+"/en-cs/batch", headers={
+        r = requests.post(self.ADDRESS_BASE+"/en-cs/batch?src=en&tgt=cs", headers={
             "Content-Type": "application/json",
             "accept": "application/json",
         }, json={

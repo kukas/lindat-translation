@@ -68,7 +68,7 @@ class MyAbstractResource(Resource):
     def process_translatable_languages_endpoint(self, translatable, ns, log):
         """
         Translate the uploaded translatable
-        in /languages/ and /languages/file endpoints.
+        in /languages/, /languages/batch and /languages/file endpoints.
         """
         args = text_input_with_src_tgt.parse_args(request)
         src = args.get('src') or 'en'
@@ -86,17 +86,23 @@ class MyAbstractResource(Resource):
             except Exception as ex:
                 log.exception(ex)
     
-    def process_translatable_models_endpoint(self, model, translatable, ns, log, src, tgt):
+    def process_translatable_models_endpoint(self, model, translatable, ns, log):
+        """
+        Translate the uploaded translatable
+        in /models/<model>, /models/<model>/batch and /models/<model>/file endpoints.
+        """
+        args = text_input_with_src_tgt.parse_args(request)
+
         # map model name to model obj
         model = models.get_model(model)
         src_default = list(model.supports.keys())[0]
-        src = src or src_default # NOTE: replaces falsy values in request to default language
+        src = args.get('src', src_default) or src_default # NOTE: replaces falsy values in request to default language
         if src not in model.supports.keys():
             ns.abort(code=404,
                       message='This model does not support translation from {}'
                       .format(src))
         tgt_default = list(model.supports[src])[0]
-        tgt = tgt or tgt_default # NOTE: replaces falsy values in request to default language
+        tgt = args.get('tgt', tgt_default) or tgt_default # NOTE: replaces falsy values in request to default language
         if tgt not in model.supports[src]:
             ns.abort(code=404,
                       message='This model does not support translation from {} to {}'

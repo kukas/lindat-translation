@@ -92,7 +92,6 @@ class LanguagesEndpointTester(unittest.TestCase):
         }, data={
             "input_text": "this is a sample text"
         })
-        pp(r.text)
         self.assertEqual(r.status_code, 400)
         self.assertIn("No text found in the input_text", r.text)
 
@@ -218,11 +217,11 @@ class LanguagesEndpointTester(unittest.TestCase):
         self.assertEqual(r.text, '{"message": "The total text length in the document exceeds the translation limit."}\n')
 
     def test_translate_batch(self):
-        r = requests.post(self.ADDRESS_BATCH, headers={
+        r = requests.post(self.ADDRESS_BATCH+"?src=en&tgt=cs", headers={
             "Content-Type": "application/json",
             "accept": "application/json",
         }, json={
-            "input_texts": ["Apple", "Banana", "Pineapple"],
+            "input_texts": ["An apple", "A banana", "A pineapple"],
             "src": "en",
             "tgt": "cs"
         })

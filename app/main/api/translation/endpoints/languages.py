@@ -5,6 +5,7 @@ from flask_restx import Namespace, Resource, fields
 from app.main.api.translation.endpoints.MyAbstractResource import MyAbstractResource
 from app.main.api.translation.parsers import upload_parser
 from app.model_settings import languages
+from app.main.textbatch import TextBatch
 from app.settings import FILE_TRANSLATE_MIMETYPES
 
 from app.main.api_examples.language_resource_example import *
@@ -134,6 +135,37 @@ class LanguageTranslate(MyAbstractResource):
         self.set_media_type_representations() # ensures correct output Content-Type according to the requests Accept header
         self.start_time_request()
         translatable = self.get_text_from_request()
+        return self.process_translatable_languages_endpoint(translatable, ns, log)
+
+
+@ns.route('/batch')
+class BatchTranslation(MyAbstractResource):
+    @ns.param(**{'name': 'tgt', 'description': 'Target language (e.g., `cs` for Czech)', 'x-example': 'cs'})
+    @ns.param(**{'name': 'src', 'description': 'Source language (e.g., `en` for English)', 'x-example': 'en'})
+    @ns.expect(ns.model('BatchTranslationRequest', {
+        'input_texts': fields.List(fields.String, required=True, description='List of sentences to translate'),
+    }))
+    @ns.marshal_with(ns.model('BatchTranslationResponse', {
+        'translations': fields.List(fields.String, description='List of translated texts'),
+    }))
+    def post(self):
+        """
+        Translate a batch of texts from the source language to the target language.
+        The source and target languages are specified as query parameters `src` and `tgt`.
+        The request body must include:
+        - `input_texts`: A list of strings to translate.
+
+        Example payload:
+        ```
+        {
+            "input_texts": ["Hello, world!", "How are you?"],
+        }
+        ```
+        """
+        self.start_time_request()
+        payload = ns.payload
+        texts = payload['input_texts']
+        translatable = TextBatch(texts)
         return self.process_translatable_languages_endpoint(translatable, ns, log)
 
 @ns.route('/file')

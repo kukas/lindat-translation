@@ -117,11 +117,7 @@ class ModelItem(MyAbstractResource):
         self.set_media_type_representations() # ensures correct output Content-Type according to the requests Accept header
         self.start_time_request()
         translatable = self.get_text_from_request()
-
-        args = text_input_with_src_tgt.parse_args(request)
-        src = args.get('src', None)
-        tgt = args.get('tgt', None)
-        return self.process_translatable_models_endpoint(model, translatable, ns, log, src, tgt)
+        return self.process_translatable_models_endpoint(model, translatable, ns, log)
 
     @ns.marshal_with(model_resource, skip_none=True)
     def get(self, model):
@@ -132,10 +128,10 @@ class ModelItem(MyAbstractResource):
 
 @ns.route(f'/<any{model_names}:model>/batch')
 class BatchTranslation(MyAbstractResource):
+    @ns.param(**{'name': 'tgt', 'description': 'Target language (e.g., `cs` for Czech)', 'x-example': 'cs'})
+    @ns.param(**{'name': 'src', 'description': 'Source language (e.g., `en` for English)', 'x-example': 'en'})
     @ns.expect(ns.model('BatchTranslationRequest', {
         'input_texts': fields.List(fields.String, required=True, description='List of sentences to translate'),
-        'src': fields.String(description='Source language code'),
-        'tgt': fields.String(description='Target language code'),
     }))
     @ns.marshal_with(ns.model('BatchTranslationResponse', {
         'translations': fields.List(fields.String, description='List of translated texts'),
@@ -143,28 +139,22 @@ class BatchTranslation(MyAbstractResource):
     def post(self, model):
         """
         Translate a batch of texts from the source language to the target language.
+        The source and target languages are specified as query parameters `src` and `tgt`.
         The request body must include:
         - `input_texts`: A list of strings to translate.
-        Additionally, the request may specify the source and target languages:
-        - `src`: Source language code.
-        - `tgt`: Target language code.
 
         Example payload:
+        ```
         {
             "input_texts": ["Hello, world!", "How are you?"],
-            "src": "en",
-            "tgt": "cs"
         }
-
+        ```
         """
         self.start_time_request()
         payload = ns.payload
         texts = payload['input_texts']
-        src = payload.get('src', None)
-        tgt = payload.get('tgt', None)
-
         translatable = TextBatch(texts)
-        return self.process_translatable_models_endpoint(model, translatable, ns, log, src, tgt)
+        return self.process_translatable_models_endpoint(model, translatable, ns, log)
 
 @ns.route(f'/<any{model_names}:model>/file')
 @ns.param(**{'name': 'model', 'description': 'model name', 'x-example': 'en-cs', '_in': 'path'})
@@ -183,8 +173,4 @@ class ModelTranslateFile(MyAbstractResource):
         """
         self.start_time_request()
         translatable = self.get_file_from_request()
-
-        args = text_input_with_src_tgt.parse_args(request)
-        src = args.get('src', None)
-        tgt = args.get('tgt', None)
-        return self.process_translatable_models_endpoint(model, translatable, ns, log, src, tgt)
+        return self.process_translatable_models_endpoint(model, translatable, ns, log)
