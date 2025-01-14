@@ -50,4 +50,4 @@ FILE_TRANSLATE_MIMETYPES = [
     'application/x-yaml'
 ]
 
-TIKAL_PATH = "/home/balhar/okapi/"
+TIKAL_PATH='/srv/okapi-apps/'
